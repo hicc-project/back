@@ -1,8 +1,8 @@
 fastapi
 uvicorn
 pydantic
-passlib  # 사용자가 가입할 때 입력한 비밀번호를 암호화해서 저장
-        # 로그인할 때 맞는 지 비교하는 용도
+passlib[bcrypt]
 bcrypt==4.0.1
 python-jose[cryptography]
 email-validator
+python-multipart

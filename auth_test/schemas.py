@@ -1,17 +1,10 @@
-from pydantic import BaseModel, EmailStr, Field
-
+from pydantic import BaseModel, Field
 
 class UserRegister(BaseModel):
-    email: EmailStr
-    password: str = Field(min_length=4, max_length=128)
-    nickname: str = Field(min_length=1, max_length=30)
-
+    username: str = Field(..., description="아이디(식별자)")
+    password: str
+    nickname: str
 
 class UserLogin(BaseModel):
-    email: EmailStr
-    password: str = Field(min_length=4, max_length=128)
-
-
-class Token(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
+    username: str = Field(..., description="아이디(식별자)")
+    password: str

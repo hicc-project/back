@@ -15,14 +15,12 @@ from kakao.kakao_panel3 import fetch_panel3
 from parser.cafe_open_hours import parse_from_panel3
 from parser.status_calculator import compute_open_now_and_remaining
 
-from db.repository import upsert_place, insert_place_detail, insert_open_status_log
+from cafes.repository import upsert_place, insert_place_detail, insert_open_status_log
 
 from cafes.models import Place, PlaceDetail, Cafe24h
 from .serializers import PlaceSerializer
 
 import traceback
-
-load_dotenv()
 
 KAKAO_REST_KEY = os.getenv("KAKAO_REST_KEY", "").strip().strip('"').strip("'")
 

@@ -60,22 +60,19 @@ def insert_place_detail(detail: Dict) -> PlaceDetail:
 
 @transaction.atomic
 def insert_open_status_log(row: Dict) -> OpenStatusLog:
-    """
-    open_status_logs insert
-    """
-    kakao_id = str(row.get("kakao_id") or "")
-    if not kakao_id:
-        raise ValueError("kakao_id is required")
+    place = row.get("place")
+    if place is None:
+        kakao_id = str(row.get("kakao_id") or "")
+        if not kakao_id:
+            raise ValueError("place or kakao_id is required")
+        place, _ = Place.objects.get_or_create(kakao_id=kakao_id, defaults={"name": row.get("name")})
 
-    place, _ = Place.objects.get_or_create(kakao_id=kakao_id, defaults={"name": row.get("name")})
-
-    obj = OpenStatusLog.objects.create(
+    return OpenStatusLog.objects.create(
         place=place,
         name=row.get("name"),
-        is_open_now=row.get("is_open_now"),  # BooleanField(null=True)
+        is_open_now=row.get("is_open_now"),
         today_open_time=row.get("today_open_time"),
         today_close_time=row.get("today_close_time"),
         minutes_to_close=row.get("minutes_to_close"),
         today_status_note=row.get("today_status_note"),
     )
-    return obj

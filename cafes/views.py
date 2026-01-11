@@ -268,18 +268,18 @@ from cafes.models import OpenStatusLog
 
 @api_view(["GET"])
 def open_status_logs(request):
-    """
-    GET /api/open_status_logs/
-    - 최근 영업 상태 로그 조회 (최신순)
-    """
-    limit = int(request.query_params.get("limit", 100))
+    limit_raw = request.query_params.get("limit", "100")
+    try:
+        limit = int(limit_raw)
+    except (TypeError, ValueError):
+        limit = 100
 
-    qs = OpenStatusLog.objects.order_by("-checked_at")[:limit]
+    qs = OpenStatusLog.objects.select_related("place").order_by("-checked_at")[:limit]
 
     data = []
     for log in qs:
         data.append({
-            "kakao_id": log.kakao_id,
+            "kakao_id": log.place.kakao_id,   # ✅ 여기!
             "name": log.name,
             "is_open_now": log.is_open_now,
             "today_open_time": log.today_open_time,
@@ -288,5 +288,4 @@ def open_status_logs(request):
             "today_status_note": log.today_status_note,
             "checked_at": log.checked_at,
         })
-
     return Response(data)

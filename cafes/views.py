@@ -263,3 +263,30 @@ def cafes_24h(request):
         })
 
     return Response(data)
+
+from cafes.models import OpenStatusLog
+
+@api_view(["GET"])
+def open_status_logs(request):
+    """
+    GET /api/open_status_logs/
+    - 최근 영업 상태 로그 조회 (최신순)
+    """
+    limit = int(request.query_params.get("limit", 100))
+
+    qs = OpenStatusLog.objects.order_by("-checked_at")[:limit]
+
+    data = []
+    for log in qs:
+        data.append({
+            "kakao_id": log.kakao_id,
+            "name": log.name,
+            "is_open_now": log.is_open_now,
+            "today_open_time": log.today_open_time,
+            "today_close_time": log.today_close_time,
+            "minutes_to_close": log.minutes_to_close,
+            "today_status_note": log.today_status_note,
+            "checked_at": log.checked_at,
+        })
+
+    return Response(data)

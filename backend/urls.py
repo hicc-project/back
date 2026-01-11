@@ -16,7 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from cafes.views import places,collect_places, collect_details, refresh_status, cafes_24h
+from cafes.views import places,collect_places, collect_details, refresh_status, cafes_24h, open_status_logs
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -25,4 +25,5 @@ urlpatterns = [
     path("collect_details/", collect_details),
     path("refresh_status/", refresh_status),
     path("api/cafes_24h/", cafes_24h),
+    path("api/open_status_logs/", open_status_logs),
 ]

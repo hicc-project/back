@@ -28,11 +28,8 @@ urlpatterns = [
     path("refresh_status/", refresh_status),
     path("api/cafes_24h/", cafes_24h),
     path("api/open_status_logs/", open_status_logs),
-    #authapp(회원가입)
+    #authapp(회원가입/로그인/즐겨찾기)
     path("api/auth/", include("authapp.urls")),
-    # JWT 토큰 발급/갱신(=로그인)
-    path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
-    path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
 ]
 urlpatterns += [
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),

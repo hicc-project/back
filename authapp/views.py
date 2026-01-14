@@ -1,6 +1,5 @@
 # authapp/views.py
 from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -11,39 +10,17 @@ from .serializers import SignupSerializer, BookmarkSerializer
 from .models import Bookmark
 
 
-def _flatten_serializer_errors(errors: dict) -> str:
-    """
-    serializer.errors (dict)를 사람이 읽기 좋은 한 줄 메시지로 변환
-    예: {"username": ["이미 존재하는 아이디입니다."]} -> "이미 존재하는 아이디입니다."
-    """
-    if not isinstance(errors, dict):
-        return "요청이 올바르지 않습니다."
-
-    # 가장 흔한 케이스: 특정 필드 에러가 list로 들어옴
-    for field, msgs in errors.items():
-        if isinstance(msgs, list) and len(msgs) > 0:
-            return str(msgs[0])
-        if isinstance(msgs, str):
-            return msgs
-
-    return "요청이 올바르지 않습니다."
-
-
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def signup(request):
     serializer = SignupSerializer(data=request.data)
-
     if serializer.is_valid():
         serializer.save()
         return Response({"message": "회원가입 성공"}, status=status.HTTP_201_CREATED)
 
-    # 중복 아이디 포함 모든 validation 에러를 message로 통일
-    msg = _flatten_serializer_errors(serializer.errors)
-    return Response(
-        {"message": msg, "errors": serializer.errors},
-        status=status.HTTP_400_BAD_REQUEST
-    )
+    # serializer에서 잡힌 에러(아이디 중복 등)를 그대로 내려줌
+    # 예) {"username": ["이미 존재하는 아이디입니다."]}
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(["GET", "POST"])
@@ -56,7 +33,7 @@ def bookmarks(request):
     # POST: 즐겨찾기 추가
     cafe_name = request.data.get("cafe_name")
     if not cafe_name:
-        return Response({"message": "cafe_name이 필요합니다."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"detail": "cafe_name이 필요합니다."}, status=status.HTTP_400_BAD_REQUEST)
 
     obj, created = Bookmark.objects.get_or_create(user=request.user, cafe_name=cafe_name)
     if not created:
@@ -73,26 +50,23 @@ def bookmarks(request):
 def bookmark_delete(request, bookmark_id: int):
     deleted, _ = Bookmark.objects.filter(id=bookmark_id, user=request.user).delete()
     if deleted == 0:
-        return Response({"message": "해당 즐겨찾기를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"detail": "해당 즐겨찾기를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
 
     return Response({"message": "즐겨찾기가 삭제되었습니다."}, status=status.HTTP_200_OK)
 
 
 class LoginView(TokenObtainPairView):
-    permission_classes = [AllowAny]
+    """
+    - 성공(200): message + access/refresh
+    - 실패(401): 한글 메시지로 통일
+    - 요청 누락/형식 오류(400): 한글 메시지로 통일 + 어떤 필드가 문제인지 함께 내려줌
+    """
 
     def post(self, request, *args, **kwargs):
-        username = request.data.get("username")
-        password = request.data.get("password")
+        resp = super().post(request, *args, **kwargs)
 
-        # 입력 누락도 알려주기
-        if not username:
-            return Response({"message": "username이 필요합니다."}, status=status.HTTP_400_BAD_REQUEST)
-        if not password:
-            return Response({"message": "password가 필요합니다."}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            resp = super().post(request, *args, **kwargs)
+        # 성공
+        if resp.status_code == status.HTTP_200_OK:
             data = resp.data
             return Response(
                 {
@@ -103,9 +77,23 @@ class LoginView(TokenObtainPairView):
                 status=status.HTTP_200_OK
             )
 
-        # 아이디/비번 틀리면 한국어 메시지로 통일
-        except (InvalidToken, TokenError):
+        # 실패(보통 아이디/비번 틀림, 비활성 계정 등)
+        if resp.status_code == status.HTTP_401_UNAUTHORIZED:
             return Response(
-                {"message": "아이디 또는 비밀번호가 올바르지 않습니다."},
+                {"detail": "아이디 또는 비밀번호가 올바르지 않습니다."},
                 status=status.HTTP_401_UNAUTHORIZED
             )
+
+        # 그 외(대부분 400: username/password 누락 등)
+        if resp.status_code == status.HTTP_400_BAD_REQUEST:
+            # 원본 에러도 같이 주면 프론트에서 디버깅/표시하기 좋음
+            return Response(
+                {
+                    "detail": "요청이 올바르지 않습니다.",
+                    "errors": resp.data,  # 예: {"username": ["This field is required."]}
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 기타 상태코드도 안전하게 전달
+        return Response(resp.data, status=resp.status_code)

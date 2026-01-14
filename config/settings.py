@@ -24,3 +24,5 @@ if not PANEL3_COOKIE:
 # ---------- HTTP common ----------
 HTTP_TIMEOUT_SEC = int(os.getenv("HTTP_TIMEOUT_SEC", "20"))
 REQUEST_SLEEP_SEC = float(os.getenv("REQUEST_SLEEP_SEC", "0.2"))
+
+ALLOWED_HOSTS = ["127.0.0.1", "localhost"]

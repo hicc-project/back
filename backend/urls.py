@@ -15,8 +15,10 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
 from cafes.views import places,collect_places, collect_details, refresh_status, cafes_24h, open_status_logs
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -26,4 +28,13 @@ urlpatterns = [
     path("refresh_status/", refresh_status),
     path("api/cafes_24h/", cafes_24h),
     path("api/open_status_logs/", open_status_logs),
+    #authapp(회원가입)
+    path("api/auth/", include("authapp.urls")),
+    # JWT 토큰 발급/갱신(=로그인)
+    path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
+    path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+]
+urlpatterns += [
+    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
 ]

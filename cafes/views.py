@@ -84,7 +84,7 @@ def collect_places(request):
         radius=radius,
         category_code="CE7",
         size=15,
-        max_pages=10,
+        max_pages=3,
     )
 
     saved = 0

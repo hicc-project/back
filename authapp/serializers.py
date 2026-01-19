@@ -28,3 +28,7 @@ class BookmarkSerializer(serializers.ModelSerializer):
         model = Bookmark
         fields = ["id", "cafe_name", "created_at"]
         read_only_fields = ["id", "created_at"]
+        
+#Swagger/POST 입력칸용
+class BookmarkCreateSerializer(serializers.Serializer):
+    cafe_name = serializers.CharField(max_length=255)

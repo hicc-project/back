@@ -1,15 +1,27 @@
 # authapp/views.py
 from rest_framework_simplejwt.views import TokenObtainPairView
-
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 
-from .serializers import SignupSerializer, BookmarkSerializer
+from drf_spectacular.utils import extend_schema, OpenApiResponse
+
+from .serializers import (
+    SignupSerializer,
+    BookmarkSerializer,
+    BookmarkCreateSerializer,
+)
 from .models import Bookmark
 
 
+@extend_schema(
+    request=SignupSerializer,
+    responses={
+        201: OpenApiResponse(description="회원가입 성공"),
+        400: OpenApiResponse(description="요청 오류(중복 아이디/필드 누락 등)"),
+    },
+)
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def signup(request):
@@ -17,12 +29,23 @@ def signup(request):
     if serializer.is_valid():
         serializer.save()
         return Response({"message": "회원가입 성공"}, status=status.HTTP_201_CREATED)
-
-    # serializer에서 잡힌 에러(아이디 중복 등)를 그대로 내려줌
-    # 예) {"username": ["이미 존재하는 아이디입니다."]}
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(
+    methods=["GET"],
+    responses={200: BookmarkSerializer(many=True)},
+)
+@extend_schema(
+    methods=["POST"],
+    request=BookmarkCreateSerializer,
+    responses={
+        201: OpenApiResponse(description="즐겨찾기 추가 성공"),
+        200: OpenApiResponse(description="이미 즐겨찾기에 있음"),
+        400: OpenApiResponse(description="cafe_name 누락"),
+        401: OpenApiResponse(description="인증 필요"),
+    },
+)
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
 def bookmarks(request):
@@ -30,7 +53,6 @@ def bookmarks(request):
         qs = Bookmark.objects.filter(user=request.user)
         return Response(BookmarkSerializer(qs, many=True).data, status=status.HTTP_200_OK)
 
-    # POST: 즐겨찾기 추가
     cafe_name = request.data.get("cafe_name")
     if not cafe_name:
         return Response({"detail": "cafe_name이 필요합니다."}, status=status.HTTP_400_BAD_REQUEST)
@@ -45,27 +67,31 @@ def bookmarks(request):
     )
 
 
+@extend_schema(
+    methods=["DELETE"],
+    responses={
+        200: OpenApiResponse(description="삭제 성공"),
+        404: OpenApiResponse(description="해당 즐겨찾기 없음"),
+        401: OpenApiResponse(description="인증 필요"),
+    },
+)
 @api_view(["DELETE"])
 @permission_classes([IsAuthenticated])
 def bookmark_delete(request, bookmark_id: int):
     deleted, _ = Bookmark.objects.filter(id=bookmark_id, user=request.user).delete()
     if deleted == 0:
         return Response({"detail": "해당 즐겨찾기를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
-
     return Response({"message": "즐겨찾기가 삭제되었습니다."}, status=status.HTTP_200_OK)
 
 
 class LoginView(TokenObtainPairView):
     """
-    - 성공(200): message + access/refresh
-    - 실패(401): 한글 메시지로 통일
-    - 요청 누락/형식 오류(400): 한글 메시지로 통일 + 어떤 필드가 문제인지 함께 내려줌
+    Swagger 입력칸(username/password)은 TokenObtainPairView 기본 스키마로도 뜨는 편이지만,
+    응답을 커스텀했으니 실패 응답을 한글로 통일한 로직은 유지.
     """
-
     def post(self, request, *args, **kwargs):
         resp = super().post(request, *args, **kwargs)
 
-        # 성공
         if resp.status_code == status.HTTP_200_OK:
             data = resp.data
             return Response(
@@ -77,23 +103,16 @@ class LoginView(TokenObtainPairView):
                 status=status.HTTP_200_OK
             )
 
-        # 실패(보통 아이디/비번 틀림, 비활성 계정 등)
         if resp.status_code == status.HTTP_401_UNAUTHORIZED:
             return Response(
                 {"detail": "아이디 또는 비밀번호가 올바르지 않습니다."},
                 status=status.HTTP_401_UNAUTHORIZED
             )
 
-        # 그 외(대부분 400: username/password 누락 등)
         if resp.status_code == status.HTTP_400_BAD_REQUEST:
-            # 원본 에러도 같이 주면 프론트에서 디버깅/표시하기 좋음
             return Response(
-                {
-                    "detail": "요청이 올바르지 않습니다.",
-                    "errors": resp.data,  # 예: {"username": ["This field is required."]}
-                },
+                {"detail": "요청이 올바르지 않습니다.", "errors": resp.data},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # 기타 상태코드도 안전하게 전달
         return Response(resp.data, status=resp.status_code)

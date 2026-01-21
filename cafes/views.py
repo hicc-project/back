@@ -265,6 +265,9 @@ def cafes_24h(request):
     return Response(data)
 
 from cafes.models import OpenStatusLog
+from django.db.models import F
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
 
 @api_view(["GET"])
 def open_status_logs(request):
@@ -273,8 +276,17 @@ def open_status_logs(request):
         limit = int(limit_raw)
     except (TypeError, ValueError):
         limit = 100
+    order = request.query_params.get("order", "id")
+    qs = OpenStatusLog.objects.select_related("place")
 
-    qs = OpenStatusLog.objects.select_related("place").order_by("-checked_at")[:limit]
+    if order == "minutes":
+        qs = qs.order_by(
+            F("minutes_to_close").asc(nulls_last=True)
+        )
+    else:
+        qs = qs.order_by("id")
+
+    qs = qs[:limit]
 
     data = []
     for log in qs:

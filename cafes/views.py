@@ -279,7 +279,7 @@ def open_status_logs(request):
     data = []
     for log in qs:
         data.append({
-            "kakao_id": log.place.kakao_id,   # ✅ 여기!
+            "kakao_id": log.place.kakao_id,
             "name": log.name,
             "is_open_now": log.is_open_now,
             "today_open_time": log.today_open_time,

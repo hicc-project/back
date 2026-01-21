@@ -5,14 +5,20 @@ class Bookmark(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="bookmarks"
+        related_name="bookmarks",
     )
-    cafe_name = models.CharField(max_length=255)
+    place = models.ForeignKey(
+        "cafes.Place",
+        on_delete=models.CASCADE,
+        related_name="bookmarked_by",
+        null=False, blank=False,   # ✅ 최종: NOT NULL
+    )
+    memo = models.CharField(max_length=200, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ("user", "cafe_name")  # 같은 유저가 같은 카페 중복 저장 방지
+        constraints = [
+            models.UniqueConstraint(fields=["user", "place"], name="uniq_user_place_bookmark")
+        ]
         ordering = ["-created_at"]
 
-    def __str__(self):
-        return f"{self.user} - {self.cafe_name}"

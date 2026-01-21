@@ -1,4 +1,3 @@
-# authapp/views.py
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -7,11 +6,8 @@ from rest_framework.response import Response
 
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 
-from .serializers import (
-    SignupSerializer,
-    BookmarkSerializer,
-    BookmarkCreateSerializer,
-)
+from cafes.models import Place
+from .serializers import SignupSerializer, BookmarkSerializer, BookmarkCreateSerializer
 from .models import Bookmark
 
 
@@ -42,22 +38,37 @@ def signup(request):
     responses={
         201: OpenApiResponse(description="즐겨찾기 추가 성공"),
         200: OpenApiResponse(description="이미 즐겨찾기에 있음"),
-        400: OpenApiResponse(description="cafe_name 누락"),
+        400: OpenApiResponse(description="kakao_id 누락"),
         401: OpenApiResponse(description="인증 필요"),
+        404: OpenApiResponse(description="해당 kakao_id의 Place 없음"),
     },
 )
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
 def bookmarks(request):
     if request.method == "GET":
-        qs = Bookmark.objects.filter(user=request.user)
+        qs = Bookmark.objects.filter(user=request.user).select_related("place")
         return Response(BookmarkSerializer(qs, many=True).data, status=status.HTTP_200_OK)
 
-    cafe_name = request.data.get("cafe_name")
-    if not cafe_name:
-        return Response({"detail": "cafe_name이 필요합니다."}, status=status.HTTP_400_BAD_REQUEST)
+    # ✅ 이제 cafe_name이 아니라 kakao_id
+    kakao_id = request.data.get("kakao_id")
+    memo = request.data.get("memo", "")
 
-    obj, created = Bookmark.objects.get_or_create(user=request.user, cafe_name=cafe_name)
+    if not kakao_id:
+        return Response({"detail": "kakao_id가 필요합니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+    # ✅ Place.kakao_id가 PK라서 pk로 조회 가능
+    try:
+        place = Place.objects.get(pk=kakao_id)
+    except Place.DoesNotExist:
+        return Response({"detail": "해당 kakao_id의 카페를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+
+    obj, created = Bookmark.objects.get_or_create(
+        user=request.user,
+        place=place,
+        defaults={"memo": memo},
+    )
+
     if not created:
         return Response({"message": "이미 즐겨찾기에 있습니다."}, status=status.HTTP_200_OK)
 
@@ -85,10 +96,6 @@ def bookmark_delete(request, bookmark_id: int):
 
 
 class LoginView(TokenObtainPairView):
-    """
-    Swagger 입력칸(username/password)은 TokenObtainPairView 기본 스키마로도 뜨는 편이지만,
-    응답을 커스텀했으니 실패 응답을 한글로 통일한 로직은 유지.
-    """
     def post(self, request, *args, **kwargs):
         resp = super().post(request, *args, **kwargs)
 

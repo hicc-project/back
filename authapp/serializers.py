@@ -1,10 +1,9 @@
-# authapp/serializers.py
 from django.contrib.auth.models import User
 from rest_framework import serializers
 from .models import Bookmark
 
+
 class SignupSerializer(serializers.ModelSerializer):
-    # username을 "아이디"로 쓰기
     username = serializers.CharField(max_length=150)
     password = serializers.CharField(write_only=True, min_length=4)
 
@@ -23,12 +22,21 @@ class SignupSerializer(serializers.ModelSerializer):
         user.save()
         return user
 
+
 class BookmarkSerializer(serializers.ModelSerializer):
+    # ✅ Bookmark 모델에 kakao_id 필드가 없으니 place.kakao_id에서 뽑아오기
+    kakao_id = serializers.CharField(source="place.kakao_id", read_only=True)
+
+    # (선택) 프론트에서 편하게 쓰라고 이름도 같이 내려주고 싶으면 추가 가능
+    name = serializers.CharField(source="place.name", read_only=True)
+
     class Meta:
         model = Bookmark
-        fields = ["id", "cafe_name", "created_at"]
-        read_only_fields = ["id", "created_at"]
-        
-#Swagger/POST 입력칸용
+        fields = ["id", "kakao_id", "name", "memo", "created_at"]
+        read_only_fields = ["id", "created_at", "kakao_id", "name"]
+
+
+# Swagger / POST 입력칸용
 class BookmarkCreateSerializer(serializers.Serializer):
-    cafe_name = serializers.CharField(max_length=255)
+    kakao_id = serializers.CharField(max_length=32)  # Place.kakao_id max_length=32에 맞춤
+    memo = serializers.CharField(required=False, allow_blank=True)

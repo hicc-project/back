@@ -21,7 +21,7 @@ if PANEL3_COOKIE:
 
 def fetch_panel3(place_id: str) -> dict:
     url = f"https://place-api.map.kakao.com/places/panel3/{place_id}"
-    r = requests.get(url, headers=PANEL3_HEADERS, timeout=20)
+    r = requests.get(url, headers=PANEL3_HEADERS, timeout=(3,5))
 
     # 쿠키 만료 등 디버그 도움
     if r.status_code != 200:

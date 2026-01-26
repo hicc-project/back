@@ -113,7 +113,7 @@ from rest_framework.response import Response
 import json
 
 from cafes.models import Place
-from db.repository import bulk_insert_place_details
+from cafes.repository import bulk_insert_place_details
 
 @api_view(["POST"])
 def collect_details(request):

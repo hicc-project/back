@@ -15,7 +15,7 @@ from kakao.kakao_panel3 import fetch_panel3
 from parser.cafe_open_hours import parse_from_panel3
 from parser.status_calculator import compute_open_now_and_remaining
 
-from cafes.repository import upsert_place, insert_place_detail, insert_open_status_log
+from cafes.repository import upsert_place, bulk_insert_place_details, insert_open_status_log
 
 from cafes.models import Place, PlaceDetail, Cafe24h
 from .serializers import PlaceSerializer
@@ -107,7 +107,6 @@ def collect_places(request):
 
     return Response({"ok": True, "saved": saved, "fetched": len(docs)})
 
-
 @api_view(["POST"])
 def collect_details(request):
     limit = int(request.data.get("limit", 200))
@@ -115,10 +114,11 @@ def collect_details(request):
     qs = (
         Place.objects.exclude(place_url__isnull=True)
         .exclude(place_url__exact="")
+        .only("kakao_id", "name")  
         .order_by("-updated_at")[:limit]
     )
 
-    saved = 0
+    rows = []         # ✅ 여기로 모음
     errors = 0
 
     for p in qs:
@@ -126,24 +126,21 @@ def collect_details(request):
             panel3 = fetch_panel3(p.kakao_id)
             detail = parse_from_panel3(panel3)
 
-            row = {
+            rows.append({
                 "kakao_id": p.kakao_id,
                 "rating": detail.get("detail_rating"),
                 "review_count": detail.get("detail_review_cnt"),
                 "holiday_desc": detail.get("detail_holiday"),
                 "opening_hours_text": detail.get("detail_opening_hours"),
-
-                # ✅ 핵심: panel3 전체를 JSON으로 저장
                 "opening_hours_json": json.dumps(panel3, ensure_ascii=False),
-            }
-
-            insert_place_detail(row)
-            saved += 1
+            })
 
         except Exception as e:
             errors += 1
-            # 디버그용 (나중에 지워도 됨)
             print("[collect_details ERROR]", p.kakao_id, p.name, e)
+
+    # ✅ DB 저장은 한 번에!
+    saved = bulk_insert_place_details(rows, batch_size=200)
 
     return Response({"ok": True, "saved": saved, "errors": errors})
 

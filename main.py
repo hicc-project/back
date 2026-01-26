@@ -12,7 +12,7 @@ from parser.cafe_open_hours import parse_from_panel3
 from parser.status_calculator import compute_open_now_and_remaining
 
 from db.connection import get_connection
-from db.repository import upsert_place, insert_place_detail, insert_open_status_log
+from cafes.repository import upsert_place, insert_place_detail, insert_open_status_log
 
 
 def main():
@@ -75,7 +75,6 @@ def main():
                     "today_close_time": live.get("today_close_time"),   # 'HH:MM' or None
                     "today_status_note": live.get("today_status_note"), # 텍스트 or None
                     "minutes_to_close": live.get("minutes_to_close"),
-                    "distance" : live.get("")
                 }
                 insert_open_status_log(conn, status_row)
 

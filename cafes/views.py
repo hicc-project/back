@@ -107,42 +107,54 @@ def collect_places(request):
 
     return Response({"ok": True, "saved": saved, "fetched": len(docs)})
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+import json
+
+from cafes.models import Place
+from db.repository import bulk_insert_place_details
+
 @api_view(["POST"])
 def collect_details(request):
     limit = int(request.data.get("limit", 200))
+    workers = int(request.data.get("workers", 12))  # ✅ 동시 실행 수 조절
 
-    qs = (
+    qs = list(
         Place.objects.exclude(place_url__isnull=True)
         .exclude(place_url__exact="")
-        .only("kakao_id", "name")  
+        .only("kakao_id", "name")
         .order_by("-updated_at")[:limit]
     )
 
-    rows = []         # ✅ 여기로 모음
+    rows = []
     errors = 0
 
-    for p in qs:
-        try:
-            panel3 = fetch_panel3(p.kakao_id)
-            detail = parse_from_panel3(panel3)
+    def fetch_and_parse(p: Place):
+        panel3 = fetch_panel3(p.kakao_id)              # ✅ 네트워크 병목
+        detail = parse_from_panel3(panel3)
 
-            rows.append({
-                "kakao_id": p.kakao_id,
-                "rating": detail.get("detail_rating"),
-                "review_count": detail.get("detail_review_cnt"),
-                "holiday_desc": detail.get("detail_holiday"),
-                "opening_hours_text": detail.get("detail_opening_hours"),
-                "opening_hours_json": json.dumps(panel3, ensure_ascii=False),
-            })
+        return {
+            "kakao_id": p.kakao_id,
+            "rating": detail.get("detail_rating"),
+            "review_count": detail.get("detail_review_cnt"),
+            "holiday_desc": detail.get("detail_holiday"),
+            "opening_hours_text": detail.get("detail_opening_hours"),
+            "opening_hours_json": json.dumps(panel3, ensure_ascii=False),
+        }
 
-        except Exception as e:
-            errors += 1
-            print("[collect_details ERROR]", p.kakao_id, p.name, e)
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        futures = [ex.submit(fetch_and_parse, p) for p in qs]
+        for f in as_completed(futures):
+            try:
+                rows.append(f.result())
+            except Exception as e:
+                errors += 1
+                print("[collect_details ERROR]", e)
 
-    # ✅ DB 저장은 한 번에!
     saved = bulk_insert_place_details(rows, batch_size=200)
 
-    return Response({"ok": True, "saved": saved, "errors": errors})
+    return Response({"ok": True, "saved": saved, "errors": errors, "workers": workers})
 
 
 @api_view(["POST"])

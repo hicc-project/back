@@ -1,7 +1,7 @@
 # authapp/urls.py
 from django.urls import path
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from .views import signup, bookmarks, bookmark_delete, LoginView
+from .views import signup, bookmarks, bookmark_delete, bookmark_memo_update, LoginView
 
 urlpatterns = [
     path("signup/", signup),
@@ -16,4 +16,7 @@ urlpatterns = [
     # 즐겨찾기
     path("bookmarks/", bookmarks),  # GET, POST
     path("bookmarks/<int:bookmark_id>/", bookmark_delete),  # DELETE
+
+    #메모
+    path("bookmarks/<int:bookmark_id>/memo/", bookmark_memo_update),
 ]

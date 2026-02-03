@@ -71,8 +71,8 @@ def collect_places(request):
     if not KAKAO_REST_KEY:
         return Response({"error": "KAKAO_REST_KEY missing"}, status=500)
 
-    lat = float(request.data.get("lat", os.getenv("HOME_LAT", "37.5477")))
-    lng = float(request.data.get("lng", os.getenv("HOME_LNG", "126.9225")))
+    lat = float(request.data.get("lat", os.getenv("HOME_LAT", "37.5544229")))
+    lng = float(request.data.get("lng", os.getenv("HOME_LNG", "126.9295616")))
     radius = int(request.data.get("radius_m", os.getenv("RADIUS_M", "1000")))
 
     Place.objects.all().delete()

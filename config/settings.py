@@ -9,8 +9,8 @@ if not KAKAO_REST_KEY:
     raise RuntimeError("KAKAO_REST_KEY가 없습니다. .env에 KAKAO_REST_KEY=... 설정하세요.")
 
 # ---------- Search center (home) ----------
-HOME_LAT = float(os.getenv("HOME_LAT", "37.5506"))
-HOME_LNG = float(os.getenv("HOME_LNG", "126.9258"))
+HOME_LAT = float(os.getenv("HOME_LAT", "37.5544229"))
+HOME_LNG = float(os.getenv("HOME_LNG", "126.9295616"))
 RADIUS_M = int(os.getenv("RADIUS_M", "1000"))
 CATEGORY_CODE_CAFE = "CE7"
 REQUEST_SLEEP_SEC = float(os.getenv("REQUEST_SLEEP_SEC", "0.2"))

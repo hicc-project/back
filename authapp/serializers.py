@@ -39,4 +39,3 @@ class BookmarkSerializer(serializers.ModelSerializer):
 # Swagger / POST 입력칸용
 class BookmarkCreateSerializer(serializers.Serializer):
     kakao_id = serializers.CharField(max_length=32)  # Place.kakao_id max_length=32에 맞춤
-    memo = serializers.CharField(required=False, allow_blank=True)

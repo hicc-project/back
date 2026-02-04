@@ -278,6 +278,8 @@ from django.db.models import F
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
+from django.db import connection
+
 @api_view(["GET"])
 def open_status_logs(request):
     limit_raw = request.query_params.get("limit", "100")
@@ -285,7 +287,9 @@ def open_status_logs(request):
         limit = int(limit_raw)
     except (TypeError, ValueError):
         limit = 100
+
     order = request.query_params.get("order", "id")
+
     qs = OpenStatusLog.objects.select_related("place")
 
     if order == "minutes":
@@ -309,4 +313,15 @@ def open_status_logs(request):
             "today_status_note": log.today_status_note,
             "checked_at": log.checked_at,
         })
-    return Response(data)
+
+    debug = {
+        "vendor": connection.vendor,
+        "db_name": connection.settings_dict.get("NAME"),
+        "db_host": connection.settings_dict.get("HOST"),
+    }
+
+    return Response({
+        "_debug": debug,
+        "data": data,
+    })
+

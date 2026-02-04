@@ -6,6 +6,7 @@ from datetime import datetime
 
 from dotenv import load_dotenv
 from django.db.models import OuterRef, Subquery
+from django.db.models import F, ExpressionWrapper, FloatField
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
@@ -114,23 +115,55 @@ from cafes.repository import bulk_insert_place_details
 
 @api_view(["POST"])
 def collect_details(request):
-    limit = int(request.data.get("limit", 200))
-    workers = int(request.data.get("workers", 12))  # ✅ 동시 실행 수 조절
+    limit = int(request.data.get("limit", 45))
+    workers = int(request.data.get("workers", 6))
+    limit = max(1, min(limit, 60))      
+    workers = max(1, min(workers, 8))   
 
-    qs = list(
+    lat = request.data.get("lat")
+    lng = request.data.get("lng")
+    radius = request.data.get("radius") or request.data.get("radius_m")
+
+    qs = (
         Place.objects.exclude(place_url__isnull=True)
         .exclude(place_url__exact="")
-        .only("kakao_id", "name")
-        .order_by("-updated_at")[:limit]
+        .exclude(lat__isnull=True)
+        .exclude(lng__isnull=True)
+        .only("kakao_id", "name", "lat", "lng", "updated_at")
     )
+
+    if lat and lng and radius:
+        lat = float(lat)
+        lng = float(lng)
+        radius_m = float(radius)
+
+        dlat = radius_m / 111000.0
+        dlng = radius_m / (111000.0 * math.cos(math.radians(lat)))
+
+        qs = qs.filter(
+            lat__gte=lat - dlat,
+            lat__lte=lat + dlat,
+            lng__gte=lng - dlng,
+            lng__lte=lng + dlng,
+        )
+
+        # ✅ (추천) 거리 근사로 가까운 순 정렬
+        dx = F("lng") - lng
+        dy = F("lat") - lat
+        dist2 = ExpressionWrapper(dx * dx + dy * dy, output_field=FloatField())
+        qs = qs.annotate(dist2=dist2).order_by("dist2")
+    else:
+        # 위치가 없으면 기존처럼 최신순 (그래도 45/60으로 제한됨)
+        qs = qs.order_by("-updated_at")
+
+    qs = list(qs[:limit])
 
     rows = []
     errors = 0
 
     def fetch_and_parse(p: Place):
-        panel3 = fetch_panel3(p.kakao_id)              # ✅ 네트워크 병목
+        panel3 = fetch_panel3(p.kakao_id)
         detail = parse_from_panel3(panel3)
-
         return {
             "kakao_id": p.kakao_id,
             "rating": detail.get("detail_rating"),
@@ -147,7 +180,7 @@ def collect_details(request):
                 rows.append(f.result())
             except Exception as e:
                 errors += 1
-                print("[collect_details ERROR]", e)
+                print("[collect_details ERROR]", e, flush=True)
 
     saved = bulk_insert_place_details(rows, batch_size=200)
 

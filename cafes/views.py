@@ -314,6 +314,28 @@ def refresh_status(request):
         }
     )
 
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from cafes.models import Cafe24h
+
+@api_view(["GET"])
+def cafes_24h(request):
+    qs = Cafe24h.objects.select_related("place").order_by("-checked_at")
+
+    data = []
+    for x in qs:
+        data.append({
+            "kakao_id": x.place.kakao_id,
+            "name": x.name or x.place.name,
+            "lat": x.place.lat,
+            "lng": x.place.lng,
+            "place_url": x.place.place_url,
+            "today_open_time": x.today_open_time,
+            "today_close_time": x.today_close_time,
+            "checked_at": x.checked_at,
+        })
+
+    return Response(data)
 
 from cafes.models import OpenStatusLog
 from django.db.models import F

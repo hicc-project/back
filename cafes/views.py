@@ -197,7 +197,15 @@ def refresh_status(request):
     now = datetime.now()
     print("[refresh_status] HIT", flush=True)
 
-    # Place별 최신 PlaceDetail id (서브쿼리)
+    limit = int(request.data.get("limit", 45))
+    workers = int(request.data.get("workers", 6))
+    limit = max(1, min(limit, 60))
+    workers = max(1, min(workers, 8))
+
+    lat = request.data.get("lat")
+    lng = request.data.get("lng")
+    radius = request.data.get("radius") or request.data.get("radius_m")
+
     latest_detail_id = Subquery(
         PlaceDetail.objects.filter(place=OuterRef("pk"))
         .order_by("-fetched_at", "-id")
@@ -207,11 +215,37 @@ def refresh_status(request):
     places_qs = (
         Place.objects.annotate(latest_detail_id=latest_detail_id)
         .exclude(latest_detail_id__isnull=True)
-        .order_by("-updated_at")[:200]
+        .exclude(lat__isnull=True)
+        .exclude(lng__isnull=True)
+        .only("kakao_id", "name", "lat", "lng", "updated_at")
     )
 
+    if lat and lng and radius:
+        lat = float(lat)
+        lng = float(lng)
+        radius_m = float(radius)
+
+        dlat = radius_m / 111000.0
+        dlng = radius_m / (111000.0 * math.cos(math.radians(lat)))
+
+        places_qs = places_qs.filter(
+            lat__gte=lat - dlat,
+            lat__lte=lat + dlat,
+            lng__gte=lng - dlng,
+            lng__lte=lng + dlng,
+        )
+
+        dx = F("lng") - lng
+        dy = F("lat") - lat
+        dist2 = ExpressionWrapper(dx * dx + dy * dy, output_field=FloatField())
+        places_qs = places_qs.annotate(dist2=dist2).order_by("dist2")
+    else:
+        places_qs = places_qs.order_by("-updated_at")
+
+    places_qs = list(places_qs[:limit])
+
     latest_ids = [p.latest_detail_id for p in places_qs]
-    details_map = PlaceDetail.objects.in_bulk(latest_ids)  # {id: PlaceDetail}
+    details_map = PlaceDetail.objects.in_bulk(latest_ids)
 
     inserted = 0
     skipped = 0
@@ -226,7 +260,6 @@ def refresh_status(request):
 
             panel_json = d.opening_hours_json
 
-            # TextField면 str, 혹시 dict로 들어온 케이스도 대응
             if isinstance(panel_json, dict):
                 panel = panel_json
             else:
@@ -237,7 +270,7 @@ def refresh_status(request):
             status_row = {
                 "kakao_id": p.kakao_id,
                 "name": p.name,
-                "is_open_now": live.get("is_open_now"),  # bool/None 그대로
+                "is_open_now": live.get("is_open_now"),
                 "today_open_time": live.get("today_open_time"),
                 "today_close_time": live.get("today_close_time"),
                 "minutes_to_close": live.get("minutes_to_close"),
@@ -245,7 +278,7 @@ def refresh_status(request):
             }
 
             insert_open_status_log(status_row)
-            # ✅ 24시간 카페 판별 & 테이블 업데이트
+
             open_t = live.get("today_open_time")
             close_t = live.get("today_close_time")
 
@@ -262,12 +295,12 @@ def refresh_status(request):
                 )
             else:
                 Cafe24h.objects.filter(place=p).delete()
+
             inserted += 1
-            
 
         except Exception as e:
             errors += 1
-            print("[refresh_status ERROR]", p.kakao_id, p.name, e, flush = True)
+            print("[refresh_status ERROR]", p.kakao_id, p.name, e, flush=True)
             traceback.print_exc()
             continue
 
@@ -280,28 +313,7 @@ def refresh_status(request):
             "server_now": now.strftime("%Y-%m-%d %H:%M:%S"),
         }
     )
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from cafes.models import Cafe24h
 
-@api_view(["GET"])
-def cafes_24h(request):
-    qs = Cafe24h.objects.select_related("place").order_by("-checked_at")
-
-    data = []
-    for x in qs:
-        data.append({
-            "kakao_id": x.place.kakao_id,
-            "name": x.name or x.place.name,
-            "lat": x.place.lat,
-            "lng": x.place.lng,
-            "place_url": x.place.place_url,
-            "today_open_time": x.today_open_time,
-            "today_close_time": x.today_close_time,
-            "checked_at": x.checked_at,
-        })
-
-    return Response(data)
 
 from cafes.models import OpenStatusLog
 from django.db.models import F
@@ -344,14 +356,5 @@ def open_status_logs(request):
             "checked_at": log.checked_at,
         })
 
-    debug = {
-        "vendor": connection.vendor,
-        "db_name": connection.settings_dict.get("NAME"),
-        "db_host": connection.settings_dict.get("HOST"),
-    }
-
-    return Response({
-        "_debug": debug,
-        "data": data,
-    })
+    return Response(data)
 

@@ -75,9 +75,6 @@ def collect_places(request):
     lng = float(request.data.get("lng", os.getenv("HOME_LNG", "126.9295616")))
     radius = int(request.data.get("radius_m", os.getenv("RADIUS_M", "1000")))
 
-    Place.objects.all().delete()
-
-
     docs = kakao_search_category(
         lat=lat,
         lng=lng,

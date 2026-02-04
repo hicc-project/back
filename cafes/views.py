@@ -303,6 +303,9 @@ def refresh_status(request):
             print("[refresh_status ERROR]", p.kakao_id, p.name, e, flush=True)
             traceback.print_exc()
             continue
+    if lat and lng and radius:
+        scope_ids = [p.kakao_id for p in places_qs]
+        Cafe24h.objects.exclude(place_id__in=scope_ids).delete()
 
     return Response(
         {
@@ -354,7 +357,20 @@ def open_status_logs(request):
 
     order = request.query_params.get("order", "id")
 
-    qs = OpenStatusLog.objects.select_related("place")
+    latest_log_id = Subquery(
+        OpenStatusLog.objects.filter(place=OuterRef("pk"))
+        .order_by("-checked_at", "-id")
+        .values("id")[:1]
+    )
+
+    places = (
+        Place.objects.annotate(latest_log_id=latest_log_id)
+        .exclude(latest_log_id__isnull=True)
+    )
+
+    latest_ids = list(places.values_list("latest_log_id", flat=True))
+
+    qs = OpenStatusLog.objects.select_related("place").filter(id__in=latest_ids)
 
     if order == "minutes":
         qs = qs.order_by(
@@ -379,4 +395,3 @@ def open_status_logs(request):
         })
 
     return Response(data)
-

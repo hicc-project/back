@@ -355,7 +355,7 @@ def open_status_logs(request):
     except (TypeError, ValueError):
         limit = 100
 
-    order = request.query_params.get("order", "id")
+    order = request.query_params.get("order", "latest")
 
     latest_log_id = Subquery(
         OpenStatusLog.objects.filter(place=OuterRef("pk"))
@@ -377,7 +377,7 @@ def open_status_logs(request):
             F("minutes_to_close").asc(nulls_last=True)
         )
     else:
-        qs = qs.order_by("id")
+        qs = qs.order_by("-checked_at", "-id")
 
     qs = qs[:limit]
 

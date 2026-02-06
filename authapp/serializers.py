@@ -24,16 +24,15 @@ class SignupSerializer(serializers.ModelSerializer):
 
 
 class BookmarkSerializer(serializers.ModelSerializer):
-    # ✅ Bookmark 모델에 kakao_id 필드가 없으니 place.kakao_id에서 뽑아오기
     kakao_id = serializers.CharField(source="place.kakao_id", read_only=True)
-
-    # (선택) 프론트에서 편하게 쓰라고 이름도 같이 내려주고 싶으면 추가 가능
     name = serializers.CharField(source="place.name", read_only=True)
 
+    lat = serializers.FloatField(source="place.lat", read_only=True)
+    lng = serializers.FloatField(source="place.lng", read_only=True)
     class Meta:
         model = Bookmark
-        fields = ["id", "kakao_id", "name", "memo", "created_at"]
-        read_only_fields = ["id", "created_at", "kakao_id", "name"]
+        fields = ["id", "kakao_id", "name", "memo","lat","lng", "created_at"]
+        read_only_fields = ["id", "created_at", "kakao_id", "name","lat","lng"]
 
 
 # Swagger / POST 입력칸용

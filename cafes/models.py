@@ -40,10 +40,6 @@ class PlaceDetail(models.Model):
         related_name="details",
     )
 
-    rating = models.FloatField(null=True, blank=True)
-    review_count = models.IntegerField(null=True, blank=True)
-    holiday_desc = models.TextField(null=True, blank=True)
-
     opening_hours_text = models.TextField(null=True, blank=True)
     opening_hours_json = models.TextField(null=True, blank=True)  # (추후 JSONField 추천)
 

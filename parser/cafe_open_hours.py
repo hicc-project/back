@@ -36,6 +36,7 @@ def _parse_hhmm_korean(s: str) -> dtime | None:
         hh = 0
         mi = 0
 
+
     if not (0 <= hh <= 23 and 0 <= mi <= 59):
         return None
 
@@ -109,14 +110,7 @@ def parse_from_panel3(panel: dict) -> dict:
         "detail_opening_hours": None,
         "detail_breaktime": None,
         "detail_holiday": None,
-        "detail_rating": None,
-        "detail_review_cnt": None,
     }
-
-    review = panel.get("kakaomap_review") or {}
-    if isinstance(review, dict):
-        out["detail_rating"] = review.get("score")
-        out["detail_review_cnt"] = review.get("count") or review.get("review_count")
 
     oh = panel.get("open_hours")
     if isinstance(oh, dict):

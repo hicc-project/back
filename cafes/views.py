@@ -165,7 +165,7 @@ def collect_details(request):
         return {
             "kakao_id": p.kakao_id,
             "opening_hours_text": detail.get("detail_opening_hours"),
-            "opening_hours_json": json.dumps(panel3, ensure_ascii=False),
+            "opening_hours_json": json.dumps(panel3.get("open hours"), ensure_ascii=False),
         }
 
     with ThreadPoolExecutor(max_workers=workers) as ex:

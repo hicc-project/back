@@ -109,17 +109,12 @@ def parse_from_panel3(panel: dict) -> dict:
     out = {
         "detail_opening_hours": None,
         "detail_breaktime": None,
-        "detail_holiday": None,
     }
 
     oh = panel.get("open_hours")
     if isinstance(oh, dict):
         lines = []
-
-        off_desc = oh.get("headline_addition", {}).get("current_off_day_desc")
-        if off_desc:
-            out["detail_holiday"] = off_desc
-
+        
         week = oh.get("week_from_today", {})
         periods = week.get("week_periods", [])
 

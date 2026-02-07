@@ -39,9 +39,8 @@ class PlaceDetail(models.Model):
         on_delete=models.CASCADE,
         related_name="details",
     )
-
     opening_hours_text = models.TextField(null=True, blank=True)
-    opening_hours_json = models.TextField(null=True, blank=True)  # (추후 JSONField 추천)
+    opening_hours_json = models.TextField(null=True, blank=True)  
 
     fetched_at = models.DateTimeField(auto_now_add=True)
 

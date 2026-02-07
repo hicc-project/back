@@ -67,9 +67,6 @@ class OpenStatusLog(models.Model):
     # 스냅샷 당시 이름(Place.name이 변경될 수도 있으니 기록용)
     name = models.TextField(null=True, blank=True)
 
-    rating = models.FloatField(null=True, blank=True)
-    review_count = models.IntegerField(null=True, blank=True)
-    holiday_desc = models.TextField(null=True, blank=True)
     # 미정(None)/영업중(True)/영업종료(False)
     is_open_now = models.BooleanField(null=True, blank=True)
 

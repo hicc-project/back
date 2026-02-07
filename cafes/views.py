@@ -164,9 +164,6 @@ def collect_details(request):
         detail = parse_from_panel3(panel3)
         return {
             "kakao_id": p.kakao_id,
-            "rating": detail.get("detail_rating"),
-            "review_count": detail.get("detail_review_cnt"),
-            "holiday_desc": detail.get("detail_holiday"),
             "opening_hours_text": detail.get("detail_opening_hours"),
             "opening_hours_json": json.dumps(panel3, ensure_ascii=False),
         }

@@ -59,6 +59,9 @@ class Command(BaseCommand):
 
                 PlaceDetail.objects.create(
                     place=place,
+                    rating=parsed.get("detail_rating"),
+                    review_count=parsed.get("detail_review_cnt"),
+                    holiday_desc=parsed.get("detail_holiday"),
                     opening_hours_text=parsed.get("detail_opening_hours"),
                     opening_hours_json=json.dumps(panel.get("open_hours"), ensure_ascii=False),
                 )

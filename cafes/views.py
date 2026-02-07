@@ -147,13 +147,11 @@ def collect_details(request):
             lng__lte=lng + dlng,
         )
 
-        # ✅ (추천) 거리 근사로 가까운 순 정렬
         dx = F("lng") - lng
         dy = F("lat") - lat
         dist2 = ExpressionWrapper(dx * dx + dy * dy, output_field=FloatField())
         qs = qs.annotate(dist2=dist2).order_by("dist2")
     else:
-        # 위치가 없으면 기존처럼 최신순 (그래도 45/60으로 제한됨)
         qs = qs.order_by("-updated_at")
 
     qs = list(qs[:limit])

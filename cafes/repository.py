@@ -89,11 +89,9 @@ def bulk_insert_place_details(rows: List[Dict], batch_size: int = 200) -> int:
     if not clean:
         return 0
 
-    # 2) Place 한 번에 조회
     kakao_ids = list({r["kakao_id"] for r in clean})
     places_map = Place.objects.in_bulk(kakao_ids, field_name="kakao_id")  # {kakao_id: Place}
 
-    # 3) 없는 Place는 bulk_create (동시 실행 대비 ignore_conflicts)
     missing = [kid for kid in kakao_ids if kid not in places_map]
     if missing:
         Place.objects.bulk_create(
@@ -101,7 +99,6 @@ def bulk_insert_place_details(rows: List[Dict], batch_size: int = 200) -> int:
             batch_size=batch_size,
             ignore_conflicts=True,
         )
-        # 생성됐든(또는 이미 있었든) 다시 읽어서 map 보강
         places_map.update(Place.objects.in_bulk(missing, field_name="kakao_id"))
 
     # 4) PlaceDetail 객체 모아서 bulk_create

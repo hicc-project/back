@@ -32,12 +32,10 @@ def _parse_hhmm_korean(s: str) -> dtime | None:
     hh = int(m.group(1))
     mi = int(m.group(2))
 
-    # ✅ 24:00은 파이썬 time에 없으니 00:00으로 변환
     if hh == 24 and mi == 0:
         hh = 0
         mi = 0
 
-    # ✅ 범위 체크 (24:00 말고 24:30 같은 이상치는 None 처리)
     if not (0 <= hh <= 23 and 0 <= mi <= 59):
         return None
 

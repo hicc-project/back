@@ -35,6 +35,6 @@ class BookmarkSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "created_at", "kakao_id", "name","lat","lng"]
 
 
-# Swagger / POST 입력칸용
+
 class BookmarkCreateSerializer(serializers.Serializer):
-    kakao_id = serializers.CharField(max_length=32)  # Place.kakao_id max_length=32에 맞춤
+    kakao_id = serializers.CharField(max_length=32)  

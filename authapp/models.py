@@ -11,7 +11,7 @@ class Bookmark(models.Model):
         "cafes.Place",
         on_delete=models.CASCADE,
         related_name="bookmarked_by",
-        null=False, blank=False,   # ✅ 최종: NOT NULL
+        null=False, blank=False,   
     )
     memo = models.CharField(max_length=200, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)

@@ -34,7 +34,7 @@ def signup(request):
 )
 @extend_schema(
     methods=["POST"],
-    request=BookmarkCreateSerializer,  # ⚠️ 이 serializer는 kakao_id만 받도록 수정 권장
+    request=BookmarkCreateSerializer,  
     responses={
         201: OpenApiResponse(description="즐겨찾기 추가 성공"),
         200: OpenApiResponse(description="이미 즐겨찾기에 있음"),
@@ -46,12 +46,11 @@ def signup(request):
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
 def bookmarks(request):
-    # ✅ 즐겨찾기 목록 조회
+    
     if request.method == "GET":
         qs = Bookmark.objects.filter(user=request.user).select_related("place")
         return Response(BookmarkSerializer(qs, many=True).data, status=status.HTTP_200_OK)
 
-    # ✅ 즐겨찾기 추가 (memo는 받지 않음)
     kakao_id = request.data.get("kakao_id")
 
     if not kakao_id:
@@ -65,7 +64,7 @@ def bookmarks(request):
     obj, created = Bookmark.objects.get_or_create(
         user=request.user,
         place=place,
-        # memo는 모델 default=""로 자동 처리됨
+        
     )
 
     if not created:
@@ -99,11 +98,10 @@ def bookmarks(request):
 @permission_classes([IsAuthenticated])
 def bookmark_memo_update(request, bookmark_id: int):
     """
-    ✅ 즐겨찾기 메모만 수정하는 엔드포인트
+     즐겨찾기 메모만 수정하는 엔드포인트
     PATCH /api/auth/bookmarks/{bookmark_id}/memo/
     body: { "memo": "..." }
     """
-    # memo를 '없으면 에러'로 할지, '없으면 빈문자 저장'으로 할지 선택 가능
     if "memo" not in request.data:
         return Response({"detail": "memo가 필요합니다."}, status=status.HTTP_400_BAD_REQUEST)
 

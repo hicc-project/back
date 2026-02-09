@@ -17,8 +17,8 @@ from dotenv import load_dotenv
 from datetime import timedelta
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),  # access토큰 60분
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),     # refresh토큰 7일
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),  
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),     
 }
 
 BASE_DIR = Path(__file__).resolve().parent.parent
